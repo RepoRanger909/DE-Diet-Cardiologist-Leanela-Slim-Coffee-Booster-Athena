@@ -1,0 +1,38 @@
+(function () {
+  var eventKey = "__shopyy_initiate_checkout_sent__";
+
+  function closestAnchor(node) {
+    while (node && node !== document) {
+      if (node.tagName && String(node.tagName).toLowerCase() === "a") return node;
+      node = node.parentNode;
+    }
+    return null;
+  }
+
+  function isCheckoutHref(href) {
+    var value = String(href || "");
+    var configured = String(window.CHECKOUT_URL || "");
+    var directCampaignBase = String(window.SHOPYY_DIRECT_CAMPAIGN_BASE_URL || "");
+    if (configured && (value === configured || value.indexOf(configured + "&") === 0)) return true;
+    if (directCampaignBase && (value === directCampaignBase || value.indexOf(directCampaignBase + "&") === 0)) return true;
+    try {
+      var parsed = new URL(value, window.location.href);
+      return /\/(?:cf\/)?click(?:\/1)?$/i.test(String(parsed.pathname || ""))
+        && (String(parsed.pathname || "").endsWith("/1") || parsed.searchParams.get("lp") === "1" || parsed.searchParams.has("key"));
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function trackCheckoutIntent() {
+    if (window[eventKey] || typeof window.fbq !== "function") return;
+    window.fbq("track", "InitiateCheckout");
+    window[eventKey] = true;
+  }
+
+  // This listener only records the Meta event. It never changes, replaces, or cancels the native anchor navigation.
+  document.addEventListener("click", function (event) {
+    var anchor = closestAnchor(event.target);
+    if (anchor && isCheckoutHref(anchor.getAttribute("href") || anchor.href)) trackCheckoutIntent();
+  }, true);
+})();
